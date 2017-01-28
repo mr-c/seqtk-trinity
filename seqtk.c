@@ -184,16 +184,62 @@ static void stk_printstr(const kstring_t *s, unsigned line_len)
 	}
 }
 
+
+static void update_read_name_for_Trinity(char* name, int comment_length, const char* comment) {
+
+
+    // see if already in the old format:
+    int name_len = strlen(name);
+    if (name[name_len -2 ] == '/'
+        &&
+        (name[name_len - 1] == '1' || name[name_len - 1] == '2') ) {
+
+        // already as expected.
+        return;
+    }
+    // see if in the new format
+    else if (comment_length > 1
+             &&
+             comment[1] == ':'
+             &&
+             (comment[0] == '1' || comment[0] == '2') ) {
+        
+        // recognized as new format.  Convert to old format that trinity likes.
+        name[name_len] = '/';
+        name[name_len+1] = comment[0];
+        name[name_len + 2] = '\0';
+    }
+
+    else {
+        fprintf(stderr, "Error, not recognizing read name formatting: [%s]\n\nIf your data come from SRA, be sure to dump the fastq file like so:\n\n\tSRA_TOOLKIT/fastq-dump --defline-seq '@$sn[_$rn]/$ri' --split-files file.sra \n\n", name);
+        exit(2);
+    }
+
+    
+}
+
+
+
 static inline void stk_printseq_renamed(const kseq_t *s, int line_len, const char *prefix, int64_t n)
 {
 	putchar(s->qual.l? '@' : '>');
 	if (n >= 0) {
 		if (prefix) fputs(prefix, stdout);
 		printf("%lld", (long long)n);
-	} else fputs(s->name.s, stdout);
+	}
+    else {
+        // trinity mods
+        char* name = s->name.s;
+        char name_copy [1000];
+        strcpy(name_copy, name);
+        update_read_name_for_Trinity(name_copy, s->comment.l, s->comment.s);
+        fputs(name_copy, stdout);
+    }
+    /*    // trinity mod
 	if (s->comment.l) {
 		putchar(' '); fputs(s->comment.s, stdout);
 	}
+    */
 	stk_printstr(&s->seq, line_len);
 	if (s->qual.l) {
 		putchar('+');

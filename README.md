@@ -1,3 +1,30 @@
+
+# seqtk-trinity: slightly hacked version of Heng Li's seqtk for fastq-to-fasta conversions for Trinity compatibility.
+
+code was forked here and slightly modified.
+
+Using
+
+     seqtk seq -A fastq > fasta
+
+it'll convert the newer style headers:
+
+    ex.
+
+    @M01581:927:000000000-ARTAL:1:1101:19874:2078 1:N:0:1
+
+to
+
+    >M01581:927:000000000-ARTAL:1:1101:19874:2078/1
+
+which is the way Trinity likes to see the FASTA format.   :-)
+
+
+
+
+
+# Original documentation from fork below:
+
 Introduction
 ------------
 
