@@ -1,9 +1,9 @@
 CC=gcc
 CFLAGS=-g -Wall -O2 -Wno-unused-function
 
-all:seqtk
+all:seqtk-trinity
 
-seqtk:seqtk.c khash.h kseq.h
+seqtk-trinity:seqtk.c khash.h kseq.h
 		$(CC) $(CFLAGS) seqtk.c -o $@ -lz -lm
 
 clean:
