@@ -49,6 +49,9 @@ KHASH_SET_INIT_INT64(64)
 
 typedef kh_reg_t reghash_t;
 
+unsigned read_type = 0; // for trinity in setting /1 or /2
+
+
 reghash_t *stk_reg_read(const char *fn)
 {
 	reghash_t *h = kh_init(reg);
@@ -185,35 +188,101 @@ static void stk_printstr(const kstring_t *s, unsigned line_len)
 }
 
 
+static unsigned ctoi(char c) {
+    char c2[2] = {'0', '\0'};
+    
+    c2[0] = c;
+    
+    unsigned i = atoi(c2);
+    
+    return(i);
+}
+
 static void update_read_name_for_Trinity(char* name, int comment_length, const char* comment) {
 
 
     // see if already in the old format:
-    int name_len = strlen(name);
-    if (name[name_len -2 ] == '/'
-        &&
-        (name[name_len - 1] == '1' || name[name_len - 1] == '2') ) {
+    //  ie.
+    //  61DFRAAXX100204:1:101:11674:10443/1
 
-        // already as expected.
+
+    int name_len = strlen(name);
+    char read_type_char = name[name_len - 1];
+    
+    // check for _forward or _reverse in read name.
+
+    char* found;
+    if ( (found = strstr(name, "_forward")) != NULL) {
+        name_len = found - name;
+    } else if ( (found = strstr(name, "_reverse")) != NULL) {
+        name_len = found - name;
+    }
+    
+    
+    if ( found == NULL 
+         && 
+         name[name_len -2 ] == '/'
+         &&
+        (read_type_char == '1' || read_type_char == '2') ) {
+
+        // ensure as expected.
+        if (ctoi(read_type_char) != read_type) {
+            fprintf(stderr, "Error, found read_type %c but expecting read_type %i\n", read_type_char, read_type);
+            exit(2);
+        } 
+        
         return;
     }
+    
+
     // see if in the new format
-    else if (comment_length > 1
-             &&
+    //  ie. 
+    //  M01581:927:000000000-ARTAL:1:1101:19874:2078 1:N:0:1
+    
+    read_type_char = comment[0];
+
+    if (found == NULL 
+        &&
+        comment_length > 1
+         &&
              comment[1] == ':'
              &&
-             (comment[0] == '1' || comment[0] == '2') ) {
+             (read_type_char == '1' || read_type_char == '2') ) {
+        
+        // ensure as expected
+        if (ctoi(read_type_char) != read_type) {
+            fprintf(stderr, "Error, found read_type %c but expecting read_type %i\n", read_type_char, read_type);
+            exit(2);
+        } 
         
         // recognized as new format.  Convert to old format that trinity likes.
         name[name_len] = '/';
         name[name_len+1] = comment[0];
         name[name_len + 2] = '\0';
+        
+        return;
     }
 
-    else {
-        fprintf(stderr, "Error, not recognizing read name formatting: [%s]\n\nIf your data come from SRA, be sure to dump the fastq file like so:\n\n\tSRA_TOOLKIT/fastq-dump --defline-seq '@$sn[_$rn]/$ri' --split-files file.sra \n\n", name);
-        exit(2);
+    
+        
+    // used to error here as per below.
+    
+    // if got here, none of the above read name format recognitions passed
+    //fprintf(stderr, "Error, not recognizing read name formatting: [%s]\n\nIf your data come from SRA, be sure to dump the fastq file like so:\n\n\tSRA_TOOLKIT/fastq-dump --defline-seq '@$sn[_$rn]/$ri' --split-files file.sra \n\n", name);
+    //exit(2);
+    
+    // now, we'll assume that the user knows what they're doing and just attach the /1 or /2 to the read name.
+    
+    name[name_len] = '/';
+    if (read_type == 1) {
+        name[name_len+1] = '1';
+    } else {
+        name[name_len+1] = '2';
     }
+    name[name_len + 2] = '\0';
+    
+    return;
+
 
     
 }
@@ -1230,8 +1299,9 @@ int stk_seq(int argc, char *argv[])
 	double frac = 1.;
 	khash_t(reg) *h = 0;
 	krand_t *kr = 0;
+    
 
-	while ((c = getopt(argc, argv, "N12q:l:Q:aACrn:s:f:M:L:cVUX:S")) >= 0) {
+	while ((c = getopt(argc, argv, "N12q:l:Q:aACrn:s:f:M:L:cVUX:SR:")) >= 0) {
 		switch (c) {
 			case 'a':
 			case 'A': flag |= 1; break;
@@ -1253,6 +1323,7 @@ int stk_seq(int argc, char *argv[])
 			case 'L': min_len = atoi(optarg); break;
 			case 's': kr = kr_srand(atol(optarg)); break;
 			case 'f': frac = atof(optarg); break;
+            case 'R': read_type = atoi(optarg); break;
 		}
 	}
 	if (kr == 0) kr = kr_srand(11);
@@ -1278,10 +1349,18 @@ int stk_seq(int argc, char *argv[])
 		fprintf(stderr, "         -V        shift quality by '(-Q) - 33'\n");
 		fprintf(stderr, "         -U        convert all bases to uppercases\n");
 		fprintf(stderr, "         -S        strip of white spaces in sequences\n");
-		fprintf(stderr, "\n");
+        fprintf(stderr, "         -R        read_type 1 (left) or 2 (right).  ie. -R 1 or -R 2\n");
+        fprintf(stderr, "\n");
 		free(kr);
 		return 1;
 	}
+    
+    if (read_type < 1 || read_type > 2) {
+        fprintf(stderr, "Error, must specify read type via -R as 1 or 2   ");
+        exit(2);
+    }
+    
+
 	if (line_len == 0) line_len = UINT_MAX;
 	fp = optind < argc && strcmp(argv[optind], "-")? gzopen(argv[optind], "r") : gzdopen(fileno(stdin), "r");
 	if (fp == 0) {
