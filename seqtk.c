@@ -488,7 +488,7 @@ int stk_seq(int argc, char *argv[])
         }
                 
 		++n_seqs;
-        fprintf(stderr, "-processing seq: %d\n", n_seqs);
+        //fprintf(stderr, "-processing seq: %d\n", n_seqs);
 		
         continue;
 
