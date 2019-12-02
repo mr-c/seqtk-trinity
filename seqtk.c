@@ -490,8 +490,6 @@ int stk_seq(int argc, char *argv[])
 		++n_seqs;
         //fprintf(stderr, "-processing seq: %d\n", n_seqs);
 		
-        continue;
-
         
         if (seq->seq.l < min_len) continue; // NB: length filter before taking random
 		if (frac < 1. && kr_drand(kr) >= frac) continue;
