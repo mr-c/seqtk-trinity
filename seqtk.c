@@ -461,8 +461,9 @@ int stk_seq(int argc, char *argv[])
         fprintf(stderr, "Error, must specify read type via -R as 1 or 2   ");
         exit(2);
     }
-    
 
+    char* filename = optind < argc && strcmp(argv[optind], "-")  ? argv[optind] : "-";
+    
 	if (line_len == 0) line_len = UINT_MAX;
 	fp = optind < argc && strcmp(argv[optind], "-")? gzopen(argv[optind], "r") : gzdopen(fileno(stdin), "r");
 	if (fp == 0) {
@@ -474,21 +475,26 @@ int stk_seq(int argc, char *argv[])
     
     int reading_read_ret = 1;
 	while (reading_read_ret >= 0) {
+        
 
         reading_read_ret = kseq_read(seq);
         
         if (reading_read_ret < -1) {
             // error encountered.  see kseq_read() method
-            fprintf(stderr, "Error encountered at sequence entry: %s, quals and seq lines dont match in length... corrupt file?", seq->name.s);
+            fprintf(stderr, "Error encountered just after sequence entry[%li]: %s, quals and seq lines dont match in length:\n\n... corrupt file?", n_seqs+1, seq->name.s);
             exit(3);
         }
-        else if (reading_read_ret <= 0) {
+        else if (reading_read_ret == -1) {
             // done reading file.
             break;
         }
-                
-		++n_seqs;
-        //fprintf(stderr, "-processing seq: %d\n", n_seqs);
+        else if (reading_read_ret == 0) {
+            fprintf(stderr, "Error encountered at sequence entry[%li] ... corrupt file?", n_seqs);
+            exit(4);
+        }
+
+        ++n_seqs;
+        //fprintf(stderr, "-processing seq: %li\n", n_seqs);
 		
         
         if (seq->seq.l < min_len) continue; // NB: length filter before taking random
@@ -552,6 +558,12 @@ int stk_seq(int argc, char *argv[])
 		}
 		stk_printseq(seq, line_len);
 	}
+
+    if (n_seqs <= 0) {
+        fprintf(stderr, "Error, no records were correctly parsed from %s", filename);
+        exit(5);
+    }
+    
 	kseq_destroy(seq);
 	gzclose(fp);
 	stk_reg_destroy(h);
