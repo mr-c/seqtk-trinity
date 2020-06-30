@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-g -Wall -O2 -Wno-unused-function -static
+CFLAGS=-g -Wall -O2 -Wno-unused-function 
 
 all:seqtk-trinity
 
