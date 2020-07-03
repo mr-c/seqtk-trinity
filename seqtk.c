@@ -238,31 +238,33 @@ static void update_read_name_for_Trinity(char* name, int comment_length, const c
     // see if in the new format
     //  ie. 
     //  M01581:927:000000000-ARTAL:1:1101:19874:2078 1:N:0:1
-    
-    read_type_char = comment[0];
 
-    if (found == NULL 
-        &&
-        comment_length > 1
-         &&
-             comment[1] == ':'
-             &&
-             (read_type_char == '1' || read_type_char == '2') ) {
+
+    if (comment != NULL) {
+        read_type_char = comment[0];
         
-        // ensure as expected
-        if (ctoi(read_type_char) != read_type) {
-            fprintf(stderr, "Error, found read_type %c but expecting read_type %i\n", read_type_char, read_type);
-            exit(2);
-        } 
-        
-        // recognized as new format.  Convert to old format that trinity likes.
-        name[name_len] = '/';
-        name[name_len+1] = comment[0];
-        name[name_len + 2] = '\0';
-        
-        return;
+        if (found == NULL 
+            &&
+            comment_length > 1
+            &&
+            comment[1] == ':'
+            &&
+            (read_type_char == '1' || read_type_char == '2') ) {
+            
+            // ensure as expected
+            if (ctoi(read_type_char) != read_type) {
+                fprintf(stderr, "Error, found read_type %c but expecting read_type %i\n", read_type_char, read_type);
+                exit(2);
+            } 
+            
+            // recognized as new format.  Convert to old format that trinity likes.
+            name[name_len] = '/';
+            name[name_len+1] = comment[0];
+            name[name_len + 2] = '\0';
+            
+            return;
+        }
     }
-
     
         
     // used to error here as per below.
